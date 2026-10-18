@@ -1,0 +1,2 @@
+io.github.mayafouad.api_error_spring_boot_starter.autoconfigure.ErrorStandardizerAutoConfiguration
+io.github.mayafouad.api_error_spring_boot_starter.autoconfigure.ErrorStandardizerSecurityAutoConfiguration
