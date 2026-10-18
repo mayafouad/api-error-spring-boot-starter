@@ -20,6 +20,9 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -45,20 +48,35 @@ public class GlobalExceptionHandler {
 
     // 400 - Validation errors in request body
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidation(
-            MethodArgumentNotValidException ex,
-            HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleValidationErrors(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
 
-        String message = ex.getBindingResult()
+        exception.getBindingResult()
                 .getFieldErrors()
-                .stream()
-                .map(error -> error.getField() + ": "
-                        + error.getDefaultMessage())
-                .distinct()
-                .reduce((a, b) -> a + "; " + b)
-                .orElse("Validation failed");
+                .forEach(error ->
+                        fieldErrors.merge(
+                                error.getField(),
+                                error.getDefaultMessage() == null
+                                        ? "Invalid value"
+                                        : error.getDefaultMessage(),
+                                (first, second) -> first + "; " + second
+                        )
+                );
 
-        return build(HttpStatus.BAD_REQUEST, message, request);
+        ApiErrorResponse response = factory.create(
+                HttpStatus.BAD_REQUEST,
+                "Validation failed",
+                request,
+                List.of("One or more fields contain invalid values"),
+                fieldErrors
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(response);
     }
 
     // 400 - Invalid JSON, wrong JSON types, unreadable body
